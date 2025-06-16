@@ -23,7 +23,7 @@ This web application helps you create a Standard Job Application (SJA) profile i
 *   **JSON Export:** Download your complete SJA profile as a neatly formatted `.json` file.
 *   **Open Standard:** Based on the evolving SJA (Standard Job Application) JSON schema (currently targets v1.3).
 
-## プライバシー重視
+## Privacy-focused
 
 We understand the sensitivity of job application data. This tool is built with a "privacy-first" approach:
 
