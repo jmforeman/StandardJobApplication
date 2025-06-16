@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SJA Profile Creator (App v0.1-alpha / SJA Schema v0.3-alpha)</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f4f4f4; color: #333; }
+        .container { max-width: 950px; margin: auto; background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        h1, h2, h3 { color: #333; }
+        h1 { text-align: center; border-bottom: 2px solid #007bff; padding-bottom: 10px;}
+        h2 { border-bottom: 1px solid #007bff; padding-bottom: 5px; margin-top: 30px; }
+        h3 { margin-top: 20px; color: #555; }
+        .form-section { margin-bottom: 25px; padding: 15px; border: 1px solid #ddd; border-radius: 5px; background-color: #f9f9f9; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        label .optional { font-weight: normal; color: #777; font-size: 0.9em; }
+        input[type="text"], input[type="email"], input[type="tel"], input[type="url"], input[type="date"], input[type="number"], select, textarea {
+            width: calc(100% - 22px); padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;
+        }
+        input.invalid, select.invalid, textarea.invalid { border-color: #dc3545; background-color: #f8d7da; }
+        .error-message { color: #dc3545; font-size: 0.9em; margin-top: -5px; margin-bottom: 10px; display: block; }
+        textarea { min-height: 80px; }
+        button {
+            background-color: #007bff; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; margin-right: 5px; margin-top: 5px;
+        }
+        button:hover { background-color: #0056b3; }
+        button.remove-btn { background-color: #6c757d; } /* Grey for remove */
+        button.remove-btn:hover { background-color: #5a6268; }
+        .action-buttons { margin-top: 20px; text-align: center; padding-top: 20px; border-top: 1px solid #eee;}
+        .dynamic-list-item { border: 1px dashed #bbb; padding: 15px; margin-bottom: 15px; border-radius: 4px; position: relative; background-color: #fff; }
+        .dynamic-list-item h4 { margin-top: 0; color: #007bff; border-bottom: 1px dotted #007bff; padding-bottom: 5px;}
+        .remove-btn-absolute { position: absolute; top: 10px; right: 10px; padding: 5px 8px; }
+        .privacy-notice {
+            background-color: #e6f7ff; border: 1px solid #91d5ff; padding: 15px; margin-bottom: 20px; border-radius: 4px; text-align: center;
+        }
+        .status-message { text-align: center; padding: 10px; margin-top: 10px; border-radius: 4px; font-weight: bold;}
+        .status-success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .status-error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .inline-fields { display: flex; flex-wrap: wrap; gap: 15px; }
+        .inline-fields > div { flex: 1; min-width: 200px; } /* Adjust min-width as needed */
+        .checkbox-group label { display: inline-block; margin-right: 15px; font-weight: normal;}
+        .checkbox-group input[type="checkbox"] { width: auto; margin-right: 5px; vertical-align: middle;}
+        .section-description { font-style: italic; color: #555; margin-bottom: 10px; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>SJA Profile Creator <span style="font-size: 0.6em; color: #777;">(App v0.1-alpha / SJA Schema v0.3-alpha)</span></h1>
+        <div class="privacy-notice">
+            <strong>Privacy First:</strong> All data you enter is processed and stored <em>only in your browser</em> using localStorage.
+            No data is sent to any server. The SJA JSON file is generated locally and downloaded to your computer.
+        </div>
+
+        <div class="action-buttons">
+            <button id="saveToBrowser">Save to Browser</button>
+            <button id="loadFromBrowser">Load from Browser</button>
+            <button id="clearSavedData" style="background-color: #dc3545;">Clear Saved Data</button>
+            <button id="generateJson" style="background-color: #28a745;">Validate & Download SJA File</button>
+        </div>
+        <div id="statusMessage" class="status-message" style="display:none;"></div>
+
+        <form id="sjaForm" novalidate> <!-- novalidate to prevent default browser validation, we'll do custom -->
+            <!-- Applicant Information -->
+            <div class="form-section">
+                <h2>Applicant Information</h2>
+                <div class="inline-fields">
+                    <div><label for="firstName">First Name: <span class="required-indicator">*</span></label><input type="text" id="firstName" data-sja-path="applicant_info.name.first_name" required></div>
+                    <div><label for="middleName">Middle Name: <span class="optional">(Optional)</span></label><input type="text" id="middleName" data-sja-path="applicant_info.name.middle_name"></div>
+                    <div><label for="lastName">Last Name: <span class="required-indicator">*</span></label><input type="text" id="lastName" data-sja-path="applicant_info.name.last_name" required></div>
+                </div>
+                <div><label for="preferredName">Preferred Name: <span class="optional">(Optional)</span></label><input type="text" id="preferredName" data-sja-path="applicant_info.name.preferred_name"></div>
+                <div><label for="email">Email: <span class="required-indicator">*</span></label><input type="email" id="email" data-sja-path="applicant_info.email" required></div>
+
+                <h3>Phones:</h3>
+                <div id="phonesContainer" data-sja-list="applicant_info.phones"></div>
+                <button type="button" class="addPhoneBtn">Add Phone</button>
+
+                <h3>Address:</h3>
+                <div><label for="street1">Street 1: <span class="required-indicator">*</span></label><input type="text" id="street1" data-sja-path="applicant_info.address.street1" required></div>
+                <div><label for="street2">Street 2: <span class="optional">(Optional)</span></label><input type="text" id="street2" data-sja-path="applicant_info.address.street2"></div>
+                <div class="inline-fields">
+                    <div><label for="city">City: <span class="required-indicator">*</span></label><input type="text" id="city" data-sja-path="applicant_info.address.city" required></div>
+                    <div><label for="county">County: <span class="optional">(Optional)</span></label><input type="text" id="county" data-sja-path="applicant_info.address.county"></div>
+                </div>
+                <div class="inline-fields">
+                    <div><label for="stateProvince">State/Province: <span class="required-indicator">*</span></label><input type="text" id="stateProvince" data-sja-path="applicant_info.address.state_province" required></div>
+                    <div><label for="postalCode">Postal Code: <span class="required-indicator">*</span></label><input type="text" id="postalCode" data-sja-path="applicant_info.address.postal_code" required></div>
+                    <div><label for="country">Country: <span class="required-indicator">*</span></label><input type="text" id="country" data-sja-path="applicant_info.address.country" required></div>
+                </div>
+
+                <h3>Online Profiles:</h3>
+                <div><label for="linkedinUrl">LinkedIn URL: <span class="optional">(Optional)</span></label><input type="url" id="linkedinUrl" data-sja-path="applicant_info.linkedin_url"></div>
+                <div><label for="githubUrl">GitHub URL: <span class="optional">(Optional)</span></label><input type="url" id="githubUrl" data-sja-path="applicant_info.github_url"></div>
+                <div><label for="portfolioUrl">Portfolio/Website URL: <span class="optional">(Optional)</span></label><input type="url" id="portfolioUrl" data-sja-path="applicant_info.portfolio_url"></div>
+                <h4>Other Websites: <span class="optional">(Optional)</span></h4>
+                <div id="otherWebsitesContainer" data-sja-list="applicant_info.other_websites"></div>
+                <button type="button" class="addOtherWebsiteBtn">Add Other Website</button>
+
+                <h3>Work Authorization:</h3>
+                <div><label for="workAuthStatus">Status (e.g., US Citizen, H1B): <span class="required-indicator">*</span></label><input type="text" id="workAuthStatus" data-sja-path="applicant_info.work_authorization.status" required></div>
+                <div><label for="requiresSponsorship">Do you now or in the future require work sponsorship? <span class="required-indicator">*</span></label>
+                    <select id="requiresSponsorship" data-sja-path="applicant_info.work_authorization.requires_sponsorship" required>
+                        <option value="">-- Select --</option>
+                        <option value="false">No</option><option value="true">Yes</option>
+                    </select>
+                </div>
+
+                <h3>Diversity Information <span class="optional">(Voluntary)</span></h3>
+                <p class="section-description">This information is voluntary and used for EEO reporting where applicable. You can choose "Prefer not to say" or skip fields.</p>
+                <div><label for="gender">Gender:</label><input type="text" id="gender" data-sja-path="applicant_info.diversity_info.gender" placeholder="e.g., Male, Female, Non-binary, Prefer not to say"></div>
+                <div><label for="pronouns">Preferred Pronouns:</label><input type="text" id="pronouns" data-sja-path="applicant_info.diversity_info.preferred_pronouns" placeholder="e.g., He/Him, Prefer not to say"></div>
+                <div><label for="hispanicLatino">Are you Hispanic or Latino?</label>
+                    <select id="hispanicLatino" data-sja-path="applicant_info.diversity_info.ethnicity_hispanic_or_latino">
+                        <option value="Prefer not to say">Prefer not to say</option>
+                        <option value="No">No</option><option value="Yes">Yes</option>
+                    </select>
+                </div>
+                <div><label>Race (Select all that apply):</label>
+                    <div id="raceOptions" class="checkbox-group" data-sja-list-checkbox="applicant_info.diversity_info.race">
+                        <!-- Options will be added by JS -->
+                    </div>
+                    <input type="text" id="raceOther" data-sja-path="applicant_info.diversity_info.race_other" placeholder="Other race (if selected 'Other' above)">
+                </div>
+                <div><label for="veteranStatus">Veteran Status:</label>
+                    <select id="veteranStatus" data-sja-path="applicant_info.diversity_info.veteran_status.status">
+                        <option value="Prefer not to say">Prefer not to say</option>
+                        <option value="Not a Protected Veteran">Not a Protected Veteran</option>
+                        <option value="Protected Veteran">I am a Protected Veteran</option>
+                    </select>
+                </div>
+                <div id="veteranCategoriesSection" style="display:none;">
+                    <label>Protected Veteran Categories (Select all that apply):</label>
+                    <div id="veteranCategoriesOptions" class="checkbox-group" data-sja-list-checkbox="applicant_info.diversity_info.veteran_status.protected_categories">
+                        <!-- Options will be added by JS -->
+                    </div>
+                </div>
+                <div><label for="disabilityStatus">Disability Status:</label>
+                    <select id="disabilityStatus" data-sja-path="applicant_info.diversity_info.disability_status.status">
+                        <option value="Prefer not to say">Prefer not to say</option>
+                        <option value="No, I don't have a disability">No, I don't have a disability</option>
+                        <option value="Yes, I have a disability (or previously had one)">Yes, I have a disability (or previously had one)</option>
+                    </select>
+                </div>
+                <div id="disabilityAccommodationSection" style="display:none;">
+                    <label for="disabilityAccommodation">Accommodation Needs Summary: <span class="optional">(If comfortable sharing)</span></label>
+                    <textarea id="disabilityAccommodation" data-sja-path="applicant_info.diversity_info.disability_status.accommodation_needs_summary"></textarea>
+                </div>
+            </div>
+
+            <!-- Documents -->
+            <div class="form-section">
+                <h2>Documents</h2>
+                <div><label for="resumePath">Resume Path (on your computer): <span class="optional">(e.g., C:\...\resume.pdf)</span></label><input type="text" id="resumePath" data-sja-path="resume_path"></div>
+                <div><label for="coverLetterPath">Cover Letter Template Path: <span class="optional">(Optional)</span></label><input type="text" id="coverLetterPath" data-sja-path="cover_letter_template_path"></div>
+            </div>
+
+            <!-- Education -->
+            <div class="form-section">
+                <h2>Education</h2>
+                <div id="educationContainer" data-sja-list="education"></div>
+                <button type="button" class="addEducationBtn">Add Education</button>
+            </div>
+
+            <!-- Work Experience -->
+            <div class="form-section">
+                <h2>Work Experience</h2>
+                <div id="workExperienceContainer" data-sja-list="work_experience"></div>
+                <button type="button" class="addWorkExperienceBtn">Add Work Experience</button>
+            </div>
+
+            <!-- Skills -->
+            <div class="form-section">
+                <h2>Skills</h2>
+                <div id="skillsContainer" data-sja-list="skills"></div>
+                <button type="button" class="addSkillBtn">Add Skill</button>
+            </div>
+
+            <!-- Projects -->
+            <div class="form-section">
+                <h2>Projects <span class="optional">(Personal or Academic)</span></h2>
+                <div id="projectsContainer" data-sja-list="projects"></div>
+                <button type="button" class="addProjectBtn">Add Project</button>
+            </div>
+
+            <!-- References -->
+            <div class="form-section">
+                <h2>References <span class="optional">(Often requested later)</span></h2>
+                <div id="referencesContainer" data-sja-list="references"></div>
+                <button type="button" class="addReferenceBtn">Add Reference</button>
+            </div>
+
+            <!-- Custom Questions -->
+            <div class="form-section">
+                <h2>Common Custom Questions <span class="optional">(Examples)</span></h2>
+                <div id="customQuestionsContainer" data-sja-list="custom_questions_answers"></div>
+                <button type="button" class="addCustomQuestionBtn">Add Custom Question Answer</button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        // --- SJA Schema Version ---
+        const SJA_SCHEMA_VERSION = "0.3-alpha";
+        const APP_VERSION = "0.1-alpha";
+
+        // --- Constants for Diversity Options ---
+        const RACE_OPTIONS = [
+            "American Indian or Alaska Native", "Asian", "Black or African American",
+            "Native Hawaiian or Other Pacific Islander", "White", "Two or More Races", "Other", "Prefer not to say"
+        ];
+        const VETERAN_CATEGORIES = [
+            "Disabled Veteran", "Recently Separated Veteran",
+            "Armed Forces Service Medal Veteran", "Active Duty Wartime or Campaign Badge Veteran"
+        ];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const sjaForm = document.getElementById('sjaForm');
+            const statusMessageEl = document.getElementById('statusMessage');
+
+            // --- Dynamic List Counters (used for unique IDs if needed, but primarily for item headers) ---
+            let dynamicListCounters = {
+                phones: 0, other_websites: 0, education: 0, work_experience: 0,
+                skills: 0, projects: 0, references: 0, custom_questions_answers: 0
+            };
+
+            // --- Helper to display status messages ---
+            function showStatus(message, isSuccess = true) {
+                statusMessageEl.textContent = message;
+                statusMessageEl.className = 'status-message ' + (isSuccess ? 'status-success' : 'status-error');
+                statusMessageEl.style.display = 'block';
+                // No auto-hide for validation errors, user needs to see them.
+                if (isSuccess) {
+                    setTimeout(() => { statusMessageEl.style.display = 'none'; }, 5000);
+                }
+            }
+            function hideStatus() {
+                statusMessageEl.style.display = 'none';
+            }
+
+            // --- Validation Functions ---
+            function validateField(field) {
+                let isValid = true;
+                const value = field.value.trim();
+                const errorSpan = field.nextElementSibling && field.nextElementSibling.classList.contains('error-message') ?
+                                field.nextElementSibling : document.createElement('span');
+                errorSpan.classList.add('error-message');
+                if (!field.nextElementSibling || !field.nextElementSibling.classList.contains('error-message')) {
+                    field.parentNode.insertBefore(errorSpan, field.nextSibling);
+                }
+                errorSpan.textContent = ''; // Clear previous error
+
+                if (field.hasAttribute('required') && !value) {
+                    isValid = false;
+                    errorSpan.textContent = 'This field is required.';
+                } else if (field.type === 'email' && value && !/^\S+@\S+\.\S+$/.test(value)) {
+                    isValid = false;
+                    errorSpan.textContent = 'Please enter a valid email address.';
+                } else if (field.type === 'url' && value && !/^(ftp|http|https):\/\/[^ "]+$/.test(value)) {
+                    isValid = false;
+                    errorSpan.textContent = 'Please enter a valid URL (e.g., http://example.com).';
+                } else if (field.type === 'date' && value && !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+                    // Basic check, browser might do better if not novalidate
+                    // isValid = false; errorSpan.textContent = 'Please use YYYY-MM-DD format.';
+                } else if (field.classList.contains('number-input') && value && isNaN(parseFloat(value))) {
+                     isValid = false; errorSpan.textContent = 'Please enter a valid number.';
+                }
+
+
+                field.classList.toggle('invalid', !isValid);
+                errorSpan.style.display = isValid ? 'none' : 'block';
+                return isValid;
+            }
+
+            function validateForm() {
+                hideStatus();
+                let isFormValid = true;
+                const fieldsToValidate = sjaForm.querySelectorAll('input[required], select[required], textarea[required], input[type="email"], input[type="url"], .number-input');
+                fieldsToValidate.forEach(field => {
+                    if (!validateField(field)) {
+                        isFormValid = false;
+                    }
+                });
+
+                // Validate dynamic list required fields (example for phone number)
+                document.querySelectorAll('#phonesContainer .phone-number[required]').forEach(field => {
+                     if (!validateField(field)) isFormValid = false;
+                });
+                // Add similar loops for other required fields in dynamic lists
+
+                if (!isFormValid) {
+                    showStatus('Please correct the errors in the form.', false);
+                    const firstInvalidField = sjaForm.querySelector('.invalid');
+                    if (firstInvalidField) {
+                        firstInvalidField.focus();
+                        firstInvalidField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }
+                return isFormValid;
+            }
+
+            // Attach blur listeners for real-time validation
+            sjaForm.querySelectorAll('input, select, textarea').forEach(field => {
+                field.addEventListener('blur', () => validateField(field));
+            });
+
+
+            // --- Initialize Diversity Checkbox Options ---
+            function createCheckboxOptions(containerId, optionsArray, namePrefix) {
+                const container = document.getElementById(containerId);
+                optionsArray.forEach(opt => {
+                    const label = document.createElement('label');
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.name = `${namePrefix}[]`;
+                    checkbox.value = opt;
+                    checkbox.dataset.sjaValue = opt; // For easier collection
+                    label.appendChild(checkbox);
+                    label.appendChild(document.createTextNode(` ${opt}`));
+                    container.appendChild(label);
+                });
+            }
+            createCheckboxOptions('raceOptions', RACE_OPTIONS, 'race');
+            createCheckboxOptions('veteranCategoriesOptions', VETERAN_CATEGORIES, 'vetCat');
+
+            // --- Toggle visibility for conditional diversity fields ---
+            document.getElementById('veteranStatus').addEventListener('change', function() {
+                document.getElementById('veteranCategoriesSection').style.display = this.value === 'Protected Veteran' ? 'block' : 'none';
+            });
+            document.getElementById('disabilityStatus').addEventListener('change', function() {
+                document.getElementById('disabilityAccommodationSection').style.display = this.value.startsWith('Yes') ? 'block' : 'none';
+            });
+
+
+            // --- Template Functions for Dynamic List Items ---
+            // (These create the HTML structure for each item in a list)
+            // Each function returns an HTML string or a DOM element
+
+            function createPhoneItemHTML(counter, data = {}) {
+                return `
+                    <button type="button" class="remove-btn remove-btn-absolute" title="Remove Phone">X</button>
+                    <h4>Phone ${counter}</h4>
+                    <div class="inline-fields">
+                        <div><label>Number: <span class="required-indicator">*</span></label><input type="tel" class="phone-number" value="${data.number || ''}" data-sja-path-item="number" required></div>
+                        <div><label>Type (Mobile, Home):</label><input type="text" class="phone-type" value="${data.type || 'Mobile'}" data-sja-path-item="type"></div>
+                    </div>
+                    <div class="inline-fields">
+                        <div><label>Country Code (+1):</label><input type="text" class="phone-country-code" value="${data.phone_country_code || '+1'}" data-sja-path-item="phone_country_code"></div>
+                        <div><label>Primary?</label><select class="phone-is-primary" data-sja-path-item="is_primary">
+                            <option value="false" ${!data.is_primary ? 'selected':''}>No</option>
+                            <option value="true" ${data.is_primary ? 'selected':''}>Yes</option>
+                        </select></div>
+                    </div>`;
+            }
+
+            function createOtherWebsiteItemHTML(counter, data = {}) {
+                return `
+                    <button type="button" class="remove-btn remove-btn-absolute" title="Remove Website">X</button>
+                    <h4>Website ${counter}</h4>
+                    <div class="inline-fields">
+                         <div><label>Name (e.g., Blog):</label><input type="text" class="website-name" value="${data.name || ''}" data-sja-path-item="name"></div>
+                         <div><label>URL:</label><input type="url" class="website-url" value="${data.url || ''}" data-sja-path-item="url"></div>
+                    </div>`;
+            }
+
+            function createEducationItemHTML(counter, data = {}) {
+                return `
+                    <button type="button" class="remove-btn remove-btn-absolute" title="Remove Education">X</button>
+                    <h4>Education ${counter}</h4>
+                    <div><label>Institution Name: <span class="required-indicator">*</span></label><input type="text" value="${data.institution_name || ''}" data-sja-path-item="institution_name" required></div>
+                    <div class="inline-fields">
+                        <div><label>Degree:</label><input type="text" value="${data.degree || ''}" data-sja-path-item="degree"></div>
+                        <div><label>Major/Field of Study:</label><input type="text" value="${data.major || ''}" data-sja-path-item="major"></div>
+                    </div>
+                    <div class="inline-fields">
+                        <div><label>Graduation Date (YYYY-MM-DD):</label><input type="date" value="${data.graduation_date || ''}" data-sja-path-item="graduation_date"></div>
+                        <div><label>GPA: <span class="optional">(Optional)</span></label><input type="text" class="number-input" value="${data.gpa || ''}" data-sja-path-item="gpa"></div>
+                    </div>
+                    <div><label>Institution Address: <span class="optional">(Optional - Street, City, State, Zip, Country)</span></label>
+                        <input type="text" placeholder="Street 1" value="${data.address?.street1 || ''}" data-sja-path-item="address.street1">
+                        <input type="text" placeholder="Street 2" value="${data.address?.street2 || ''}" data-sja-path-item="address.street2">
+                        <div class="inline-fields">
+                           <input type="text" placeholder="City" value="${data.address?.city || ''}" data-sja-path-item="address.city">
+                           <input type="text" placeholder="County" value="${data.address?.county || ''}" data-sja-path-item="address.county">
+                        </div>
+                        <div class="inline-fields">
+                           <input type="text" placeholder="State/Province" value="${data.address?.state_province || ''}" data-sja-path-item="address.state_province">
+                           <input type="text" placeholder="Postal Code" value="${data.address?.postal_code || ''}" data-sja-path-item="address.postal_code">
+                           <input type="text" placeholder="Country" value="${data.address?.country || ''}" data-sja-path-item="address.country">
+                        </div>
+                    </div>
+                    <div><label>Relevant Courses: <span class="optional">(Comma-separated)</span></label><input type="text" value="${(data.relevant_courses || []).join(', ')}" data-sja-path-item="relevant_courses" data-is-array-comma></div>
+                    <div><label>Honors/Awards: <span class="optional">(Comma-separated)</span></label><input type="text" value="${(data.honors_awards || []).join(', ')}" data-sja-path-item="honors_awards" data-is-array-comma></div>
+                `;
+            }
+
+            function createWorkExperienceItemHTML(counter, data = {}) {
+                return `
+                    <button type="button" class="remove-btn remove-btn-absolute" title="Remove Work Experience">X</button>
+                    <h4>Work Experience ${counter}</h4>
+                    <div><label>Company Name: <span class="required-indicator">*</span></label><input type="text" value="${data.company_name || ''}" data-sja-path-item="company_name" required></div>
+                    <div><label>Job Title: <span class="required-indicator">*</span></label><input type="text" value="${data.job_title || ''}" data-sja-path-item="job_title" required></div>
+                    <div class="inline-fields">
+                        <div><label>Start Date (YYYY-MM-DD): <span class="required-indicator">*</span></label><input type="date" value="${data.start_date || ''}" data-sja-path-item="start_date" required></div>
+                        <div><label>End Date (YYYY-MM-DD or "Present"): <span class="required-indicator">*</span></label><input type="text" value="${data.end_date || ''}" data-sja-path-item="end_date" required placeholder="YYYY-MM-DD or Present"></div>
+                    </div>
+                    <div><label>Location Type:</label>
+                        <select data-sja-path-item="location_type">
+                            <option value="On-site" ${data.location_type === 'On-site' ? 'selected' : ''}>On-site</option>
+                            <option value="Remote" ${data.location_type === 'Remote' ? 'selected' : ''}>Remote</option>
+                            <option value="Hybrid" ${data.location_type === 'Hybrid' ? 'selected' : ''}>Hybrid</option>
+                        </select>
+                    </div>
+                    <div><label>Company Address: <span class="optional">(Street, City, State, Zip, Country)</span></label>
+                        <input type="text" placeholder="Street 1" value="${data.company_address?.street1 || ''}" data-sja-path-item="company_address.street1">
+                        <input type="text" placeholder="Street 2" value="${data.company_address?.street2 || ''}" data-sja-path-item="company_address.street2">
+                        <div class="inline-fields">
+                           <input type="text" placeholder="City" value="${data.company_address?.city || ''}" data-sja-path-item="company_address.city">
+                           <input type="text" placeholder="County" value="${data.company_address?.county || ''}" data-sja-path-item="company_address.county">
+                        </div>
+                        <div class="inline-fields">
+                           <input type="text" placeholder="State/Province" value="${data.company_address?.state_province || ''}" data-sja-path-item="company_address.state_province">
+                           <input type="text" placeholder="Postal Code" value="${data.company_address?.postal_code || ''}" data-sja-path-item="company_address.postal_code">
+                           <input type="text" placeholder="Country" value="${data.company_address?.country || ''}" data-sja-path-item="company_address.country">
+                        </div>
+                    </div>
+                    <div><label>Company Phone: <span class="optional">(Optional)</span></label>
+                         <div class="inline-fields">
+                            <input type="tel" placeholder="Number" value="${data.company_phone?.number || ''}" data-sja-path-item="company_phone.number">
+                            <input type="text" placeholder="Type (e.g. Work)" value="${data.company_phone?.type || ''}" data-sja-path-item="company_phone.type">
+                            <input type="text" placeholder="Country Code (+1)" value="${data.company_phone?.phone_country_code || ''}" data-sja-path-item="company_phone.phone_country_code">
+                         </div>
+                    </div>
+                     <div><label>Supervisor Name: <span class="optional">(Optional)</span></label><input type="text" value="${data.supervisor_name || ''}" data-sja-path-item="supervisor_name"></div>
+                     <div><label>Supervisor Title: <span class="optional">(Optional)</span></label><input type="text" value="${data.supervisor_title || ''}" data-sja-path-item="supervisor_title"></div>
+                     <div><label>Supervisor Email: <span class="optional">(Optional)</span></label><input type="email" value="${data.supervisor_email || ''}" data-sja-path-item="supervisor_email"></div>
+                     <div><label>Can current employer be contacted?</label>
+                        <select data-sja-path-item="can_contact_employer">
+                            <option value="true" ${data.can_contact_employer === true ? 'selected' : ''}>Yes</option>
+                            <option value="false" ${data.can_contact_employer === false ? 'selected' : ''}>No</option>
+                            <option value="Ask me first" ${data.can_contact_employer === 'Ask me first' ? 'selected' : ''}>Ask me first</option>
+                        </select>
+                     </div>
+                    <div><label>Responsibilities (one per line):</label><textarea data-sja-path-item="responsibilities" data-is-array-newline>${(data.responsibilities || []).join('\n')}</textarea></div>
+                    <div><label>Achievements (one per line): <span class="optional">(Optional)</span></label><textarea data-sja-path-item="achievements" data-is-array-newline>${(data.achievements || []).join('\n')}</textarea></div>
+                    <div><label>Reason for Leaving: <span class="optional">(If not current)</span></label><input type="text" value="${data.reason_for_leaving || ''}" data-sja-path-item="reason_for_leaving"></div>
+                    <div class="inline-fields">
+                        <div><label>Starting Salary: <span class="optional">(Optional)</span></label><input type="number" class="number-input" value="${data.salary_start || ''}" data-sja-path-item="salary_start"></div>
+                        <div><label>Ending Salary: <span class="optional">(Optional)</span></label><input type="number" class="number-input" value="${data.salary_end || ''}" data-sja-path-item="salary_end"></div>
+                        <div><label>Currency (USD, EUR): <span class="optional">(Optional)</span></label><input type="text" value="${data.currency || 'USD'}" data-sja-path-item="currency"></div>
+                    </div>
+                `;
+            }
+
+            function createSkillItemHTML(counter, data = {}) {
+                 return `
+                    <button type="button" class="remove-btn remove-btn-absolute" title="Remove Skill">X</button>
+                    <h4>Skill ${counter}</h4>
+                     <div class="inline-fields">
+                        <div><label>Skill Name: <span class="required-indicator">*</span></label><input type="text" value="${data.skill_name || ''}" data-sja-path-item="skill_name" required></div>
+                        <div><label>Proficiency:</label><input type="text" value="${data.proficiency || ''}" data-sja-path-item="proficiency" placeholder="e.g., Advanced"></div>
+                        <div><label>Years of Experience:</label><input type="number" class="number-input" step="0.1" value="${data.years_of_experience || ''}" data-sja-path-item="years_of_experience"></div>
+                    </div>
+                `;
+            }
+
+            function createProjectItemHTML(counter, data = {}) {
+                return `
+                    <button type="button" class="remove-btn remove-btn-absolute" title="Remove Project">X</button>
+                    <h4>Project ${counter}</h4>
+                    <div><label>Project Name: <span class="required-indicator">*</span></label><input type="text" value="${data.project_name || ''}" data-sja-path-item="project_name" required></div>
+                    <div><label>Description:</label><textarea data-sja-path-item="description">${data.description || ''}</textarea></div>
+                    <div><label>URL (GitHub, Live Demo): <span class="optional">(Optional)</span></label><input type="url" value="${data.url || ''}" data-sja-path-item="url"></div>
+                    <div><label>Technologies Used (Comma-separated): <span class="optional">(Optional)</span></label><input type="text" value="${(data.technologies_used || []).join(', ')}" data-sja-path-item="technologies_used" data-is-array-comma></div>
+                    <div class="inline-fields">
+                        <div><label>Start Date: <span class="optional">(Optional)</span></label><input type="date" value="${data.start_date || ''}" data-sja-path-item="start_date"></div>
+                        <div><label>End Date: <span class="optional">(Optional)</span></label><input type="date" value="${data.end_date || ''}" data-sja-path-item="end_date"></div>
+                    </div>
+                `;
+            }
+
+            function createReferenceItemHTML(counter, data = {}) {
+                return `
+                    <button type="button" class="remove-btn remove-btn-absolute" title="Remove Reference">X</button>
+                    <h4>Reference ${counter}</h4>
+                    <div class="inline-fields">
+                        <div><label>First Name: <span class="required-indicator">*</span></label><input type="text" value="${data.name?.first_name || ''}" data-sja-path-item="name.first_name" required></div>
+                        <div><label>Last Name: <span class="required-indicator">*</span></label><input type="text" value="${data.name?.last_name || ''}" data-sja-path-item="name.last_name" required></div>
+                    </div>
+                    <div><label>Title:</label><input type="text" value="${data.title || ''}" data-sja-path-item="title"></div>
+                    <div><label>Company:</label><input type="text" value="${data.company || ''}" data-sja-path-item="company"></div>
+                    <div><label>Email: <span class="required-indicator">*</span></label><input type="email" value="${data.email || ''}" data-sja-path-item="email" required></div>
+                    <div><label>Phone: <span class="optional">(Optional)</span></label>
+                        <div class="inline-fields">
+                            <input type="tel" placeholder="Number" value="${data.phone?.number || ''}" data-sja-path-item="phone.number">
+                            <input type="text" placeholder="Type (e.g. Mobile)" value="${data.phone?.type || ''}" data-sja-path-item="phone.type">
+                            <input type="text" placeholder="Country Code (+1)" value="${data.phone?.phone_country_code || ''}" data-sja-path-item="phone.phone_country_code">
+                        </div>
+                    </div>
+                    <div><label>Relationship (e.g., Former Manager):</label><input type="text" value="${data.relationship || ''}" data-sja-path-item="relationship"></div>
+                `;
+            }
+
+            function createCustomQuestionItemHTML(counter, data = {}) {
+                return `
+                    <button type="button" class="remove-btn remove-btn-absolute" title="Remove Question">X</button>
+                    <h4>Custom Question ${counter}</h4>
+                    <div><label>Question ID <span class="optional">(e.g., salary_expectation)</span>:</label><input type="text" value="${data.question_id || ''}" data-sja-path-item="question_id"></div>
+                    <div><label>Question Text <span class="optional">(As asked by employer)</span>:</label><textarea data-sja-path-item="question_text">${data.question_text || ''}</textarea></div>
+                    <div><label>Your Answer:</label><textarea data-sja-path-item="answer">${data.answer || ''}</textarea></div>
+                `;
+            }
+
+            // --- Generic Add Item Function ---
+            function addItemToDynamicList(containerId, itemHTMLFunction, listKeyInData, data = {}) {
+                dynamicListCounters[listKeyInData]++;
+                const container = document.getElementById(containerId);
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'dynamic-list-item';
+                itemDiv.innerHTML = itemHTMLFunction(dynamicListCounters[listKeyInData], data);
+                container.appendChild(itemDiv);
+                // Attach blur listeners to new fields for real-time validation
+                itemDiv.querySelectorAll('input, select, textarea').forEach(field => {
+                    field.addEventListener('blur', () => validateField(field));
+                });
+                itemDiv.querySelector('.remove-btn').addEventListener('click', () => itemDiv.remove());
+            }
+
+            // --- Event Listeners for Add Buttons ---
+            document.querySelector('.addPhoneBtn').addEventListener('click', () => addItemToDynamicList('phonesContainer', createPhoneItemHTML, 'phones'));
+            document.querySelector('.addOtherWebsiteBtn').addEventListener('click', () => addItemToDynamicList('otherWebsitesContainer', createOtherWebsiteItemHTML, 'other_websites'));
+            document.querySelector('.addEducationBtn').addEventListener('click', () => addItemToDynamicList('educationContainer', createEducationItemHTML, 'education'));
+            document.querySelector('.addWorkExperienceBtn').addEventListener('click', () => addItemToDynamicList('workExperienceContainer', createWorkExperienceItemHTML, 'work_experience'));
+            document.querySelector('.addSkillBtn').addEventListener('click', () => addItemToDynamicList('skillsContainer', createSkillItemHTML, 'skills'));
+            document.querySelector('.addProjectBtn').addEventListener('click', () => addItemToDynamicList('projectsContainer', createProjectItemHTML, 'projects'));
+            document.querySelector('.addReferenceBtn').addEventListener('click', () => addItemToDynamicList('referencesContainer', createReferenceItemHTML, 'references'));
+            document.querySelector('.addCustomQuestionBtn').addEventListener('click', () => addItemToDynamicList('customQuestionsContainer', createCustomQuestionItemHTML, 'custom_questions_answers'));
+
+
+            // --- Helper: Get value from field based on type ---
+            function getFieldValue(field) {
+                if (field.type === 'checkbox') return field.checked;
+                if (field.type === 'select-one' && (field.parentElement.id === 'requiresSponsorship' || field.classList.contains('phone-is-primary'))) { // Example for boolean select
+                    return field.value === 'true';
+                }
+                if (field.classList.contains('number-input') && field.value.trim() !== '') {
+                    return parseFloat(field.value);
+                }
+                if (field.dataset.isArrayNewline) {
+                    return field.value.split('\n').map(s => s.trim()).filter(Boolean);
+                }
+                if (field.dataset.isArrayComma) {
+                     return field.value.split(',').map(s => s.trim()).filter(Boolean);
+                }
+                return field.value.trim();
+            }
+
+            // --- Helper: Set value to field based on type ---
+            function setFieldValue(field, value) {
+                if (value === undefined || value === null) value = '';
+                if (field.type === 'checkbox') {
+                    field.checked = Boolean(value);
+                } else if (field.type === 'select-one' && (field.parentElement.id === 'requiresSponsorship' || field.classList.contains('phone-is-primary'))) {
+                     field.value = String(Boolean(value)); // "true" or "false"
+                } else if (field.dataset.isArrayNewline) {
+                    field.value = Array.isArray(value) ? value.join('\n') : value;
+                } else if (field.dataset.isArrayComma) {
+                    field.value = Array.isArray(value) ? value.join(', ') : value;
+                }
+                else {
+                    field.value = value;
+                }
+            }
+
+             // --- Helper to set nested property in an object ---
+            function setNestedProperty(obj, path, value) {
+                const keys = path.split('.');
+                let current = obj;
+                for (let i = 0; i < keys.length - 1; i++) {
+                    if (!current[keys[i]] || typeof current[keys[i]] !== 'object') {
+                        current[keys[i]] = {};
+                    }
+                    current = current[keys[i]];
+                }
+                current[keys[keys.length - 1]] = value;
+            }
+             // --- Helper to get nested property from an object ---
+            function getNestedProperty(obj, path) {
+                const keys = path.split('.');
+                let current = obj;
+                for (const key of keys) {
+                    if (!current || typeof current !== 'object' || !(key in current)) {
+                        return undefined;
+                    }
+                    current = current[key];
+                }
+                return current;
+            }
+
+
+            // --- Collect Form Data into SJA Object (Revised) ---
+            function collectFormData() {
+                const sja = { sja_version: SJA_SCHEMA_VERSION, application_metadata: {} };
+
+                // Collect static fields
+                sjaForm.querySelectorAll('[data-sja-path]').forEach(field => {
+                    const path = field.dataset.sjaPath;
+                    setNestedProperty(sja, path, getFieldValue(field));
+                });
+
+                // Collect checkbox list fields (like race, veteran categories)
+                sjaForm.querySelectorAll('[data-sja-list-checkbox]').forEach(container => {
+                    const path = container.dataset.sjaListCheckbox;
+                    const selectedValues = [];
+                    container.querySelectorAll('input[type="checkbox"]:checked').forEach(cb => {
+                        selectedValues.push(cb.dataset.sjaValue);
+                    });
+                    setNestedProperty(sja, path, selectedValues);
+                });
+
+
+                // Collect dynamic list items
+                sjaForm.querySelectorAll('[data-sja-list]').forEach(listContainer => {
+                    const listPath = listContainer.dataset.sjaList;
+                    const itemsArray = [];
+                    listContainer.querySelectorAll('.dynamic-list-item').forEach(itemDiv => {
+                        const itemObj = {};
+                        itemDiv.querySelectorAll('[data-sja-path-item]').forEach(field => {
+                            const itemPath = field.dataset.sjaPathItem;
+                            setNestedProperty(itemObj, itemPath, getFieldValue(field));
+                        });
+                        itemsArray.push(itemObj);
+                    });
+                    setNestedProperty(sja, listPath, itemsArray);
+                });
+
+                sja.application_metadata.creation_date = sja.application_metadata.creation_date || new Date().toISOString(); // Set if not loaded
+                sja.application_metadata.last_updated = new Date().toISOString();
+                return sja;
+            }
+
+
+            // --- Populate Form from SJA Object (Revised) ---
+            function populateForm(sja) {
+                if (!sja || !sja.sja_version) {
+                    showStatus("Invalid or no SJA data to populate form.", false);
+                    return;
+                }
+                // Clear existing dynamic items before populating
+                Object.keys(dynamicListCounters).forEach(key => {
+                    document.getElementById(key + 'Container').innerHTML = ''; // Assuming container IDs match keys + "Container"
+                    dynamicListCounters[key] = 0;
+                });
+
+                // Populate static fields
+                sjaForm.querySelectorAll('[data-sja-path]').forEach(field => {
+                    const path = field.dataset.sjaPath;
+                    const value = getNestedProperty(sja, path);
+                    setFieldValue(field, value);
+                });
+
+                 // Populate checkbox list fields
+                sjaForm.querySelectorAll('[data-sja-list-checkbox]').forEach(container => {
+                    const path = container.dataset.sjaListCheckbox;
+                    const sjaValues = getNestedProperty(sja, path) || [];
+                    container.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                        cb.checked = sjaValues.includes(cb.dataset.sjaValue);
+                    });
+                });
+
+                // Populate dynamic list items
+                sjaForm.querySelectorAll('[data-sja-list]').forEach(listContainer => {
+                    const listPath = listContainer.dataset.sjaList;
+                    const itemsArray = getNestedProperty(sja, listPath) || [];
+                    const containerId = listContainer.id;
+                    const listKey = listPath.split('.').pop(); // e.g., 'phones' from 'applicant_info.phones'
+
+                    // Find the correct addItemToDynamicList call
+                    let addItemFn;
+                    if (listKey === 'phones') addItemFn = createPhoneItemHTML;
+                    else if (listKey === 'other_websites') addItemFn = createOtherWebsiteItemHTML;
+                    else if (listKey === 'education') addItemFn = createEducationItemHTML;
+                    else if (listKey === 'work_experience') addItemFn = createWorkExperienceItemHTML;
+                    else if (listKey === 'skills') addItemFn = createSkillItemHTML;
+                    else if (listKey === 'projects') addItemFn = createProjectItemHTML;
+                    else if (listKey === 'references') addItemFn = createReferenceItemHTML;
+                    else if (listKey === 'custom_questions_answers') addItemFn = createCustomQuestionItemHTML;
+
+                    if (addItemFn) {
+                        itemsArray.forEach(itemData => addItemToDynamicList(containerId, addItemFn, listKey, itemData));
+                    }
+                });
+
+                // Trigger change events for conditional visibility after populating
+                document.getElementById('veteranStatus').dispatchEvent(new Event('change'));
+                document.getElementById('disabilityStatus').dispatchEvent(new Event('change'));
+
+                showStatus("Form populated from SJA data.", true);
+            }
+
+
+            // --- LocalStorage Interaction ---
+            document.getElementById('saveToBrowser').addEventListener('click', () => {
+                hideStatus(); // Clear previous messages
+                try {
+                    const sjaData = collectFormData();
+                    localStorage.setItem('sjaProfileCreatorData_v0_1', JSON.stringify(sjaData));
+                    showStatus("Profile saved to your browser's local storage.", true);
+                } catch (e) {
+                    showStatus("Error saving profile: " + e.message, false);
+                    console.error(e);
+                }
+            });
+
+            document.getElementById('loadFromBrowser').addEventListener('click', () => {
+                hideStatus();
+                try {
+                    const savedData = localStorage.getItem('sjaProfileCreatorData_v0_1');
+                    if (savedData) {
+                        populateForm(JSON.parse(savedData));
+                    } else {
+                        showStatus("No saved profile found in local storage.", false);
+                    }
+                } catch (e) {
+                    showStatus("Error loading profile: " + e.message, false);
+                    console.error(e);
+                }
+            });
+
+            document.getElementById('clearSavedData').addEventListener('click', () => {
+                hideStatus();
+                if (confirm("Are you sure you want to clear all saved data from your browser? This will also clear the current form.")) {
+                    localStorage.removeItem('sjaProfileCreatorData_v0_1');
+                    sjaForm.reset(); // Reset form fields
+                    // Clear dynamic lists
+                    Object.keys(dynamicListCounters).forEach(key => {
+                         document.getElementById(key + 'Container').innerHTML = '';
+                         dynamicListCounters[key] = 0;
+                    });
+                    // Re-initialize diversity options which might have been cleared by reset
+                    document.getElementById('veteranCategoriesSection').style.display = 'none';
+                    document.getElementById('disabilityAccommodationSection').style.display = 'none';
+                    showStatus("Saved data cleared. Form has been reset.", true);
+                }
+            });
+
+            // --- Generate & Download JSON ---
+            document.getElementById('generateJson').addEventListener('click', () => {
+                if (!validateForm()) {
+                    return; // Stop if form is invalid
+                }
+                try {
+                    const sjaData = collectFormData();
+                    const jsonString = JSON.stringify(sjaData, null, 2);
+                    const blob = new Blob([jsonString], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+
+                    const lastName = sjaData.applicant_info?.name?.last_name || 'applicant';
+                    const dateStr = new Date().toISOString().slice(0,10).replace(/-/g,'');
+                    a.download = `sja_${lastName.toLowerCase()}_${dateStr}_v${SJA_SCHEMA_VERSION}.json`;
+                    a.href = url;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    showStatus(`SJA file (${a.download}) generated and download initiated.`, true);
+                } catch (e) {
+                    showStatus("Error generating SJA file: " + e.message, false);
+                    console.error(e);
+                }
+            });
+
+            // --- Auto-load on page load if data exists ---
+            if (localStorage.getItem('sjaProfileCreatorData_v0_1')) {
+                setTimeout(() => { document.getElementById('loadFromBrowser').click(); }, 100);
+            } else {
+                 // Add one of each dynamic item if form is empty initially to guide user
+                 addItemToDynamicList('phonesContainer', createPhoneItemHTML, 'phones');
+                 addItemToDynamicList('educationContainer', createEducationItemHTML, 'education');
+                 addItemToDynamicList('workExperienceContainer', createWorkExperienceItemHTML, 'work_experience');
+                 addItemToDynamicList('skillsContainer', createSkillItemHTML, 'skills');
+            }
+        });
+    </script>
+</body>
+</html>

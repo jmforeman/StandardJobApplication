@@ -1,0 +1,123 @@
+{
+  "sja_version": "0.3-alpha",
+  "application_metadata": {
+    "creation_date": "2025-06-16T14:19:22.470Z",
+    "last_updated": "2025-06-16T14:19:22.470Z"
+  },
+  "applicant_info": {
+    "name": {
+      "first_name": "Joseph",
+      "middle_name": "Bland",
+      "last_name": "Blow",
+      "preferred_name": "Joe"
+    },
+    "email": "JoeBlow@gmail.com",
+    "address": {
+      "street1": "5555 5th Ave",
+      "street2": "",
+      "city": "New York City",
+      "county": "",
+      "state_province": "New York",
+      "postal_code": "56481",
+      "country": "United States"
+    },
+    "linkedin_url": "",
+    "github_url": "",
+    "portfolio_url": "",
+    "work_authorization": {
+      "status": "Citizen",
+      "requires_sponsorship": "false"
+    },
+    "diversity_info": {
+      "gender": "",
+      "preferred_pronouns": "",
+      "ethnicity_hispanic_or_latino": "Prefer not to say",
+      "race_other": "",
+      "veteran_status": {
+        "status": "Not a Protected Veteran",
+        "protected_categories": []
+      },
+      "disability_status": {
+        "status": "No, I don't have a disability",
+        "accommodation_needs_summary": ""
+      },
+      "race": [
+        "Prefer not to say"
+      ]
+    },
+    "phones": [
+      {
+        "number": "555555555",
+        "type": "Mobile",
+        "phone_country_code": "+1",
+        "is_primary": true
+      }
+    ],
+    "other_websites": []
+  },
+  "resume_path": "",
+  "cover_letter_template_path": "",
+  "education": [
+    {
+      "institution_name": "Harvard University",
+      "degree": "B.A.",
+      "major": "General Studies",
+      "graduation_date": "2025-06-16",
+      "gpa": 0.1,
+      "address": {
+        "street1": "",
+        "street2": "",
+        "city": "",
+        "county": "",
+        "state_province": "",
+        "postal_code": "",
+        "country": ""
+      },
+      "relevant_courses": "",
+      "honors_awards": ""
+    }
+  ],
+  "work_experience": [
+    {
+      "company_name": "unemployed",
+      "job_title": "untitled",
+      "start_date": "2025-06-01",
+      "end_date": "Present",
+      "location_type": "On-site",
+      "company_address": {
+        "street1": "",
+        "street2": "",
+        "city": "",
+        "county": "",
+        "state_province": "",
+        "postal_code": "",
+        "country": ""
+      },
+      "company_phone": {
+        "number": "",
+        "type": "",
+        "phone_country_code": ""
+      },
+      "supervisor_name": "",
+      "supervisor_title": "",
+      "supervisor_email": "",
+      "can_contact_employer": "true",
+      "responsibilities": "",
+      "achievements": "",
+      "reason_for_leaving": "",
+      "salary_start": "",
+      "salary_end": "",
+      "currency": "USD"
+    }
+  ],
+  "skills": [
+    {
+      "skill_name": "None",
+      "proficiency": "",
+      "years_of_experience": ""
+    }
+  ],
+  "projects": [],
+  "references": [],
+  "custom_questions_answers": []
+}

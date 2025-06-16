@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Apply for Our Job - SJA Enabled</title>
+    <script src="sja-parser.js"></script> <!-- Include the library -->
+    <style>
+        body { font-family: sans-serif; margin: 20px; }
+        div { margin-bottom: 10px; }
+        label { display: inline-block; width: 150px; }
+        input[type="text"], input[type="email"], input[type="tel"], textarea, select { width: 250px; padding: 5px; }
+        .experience-item { border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; }
+        #resumeInfo strong { color: green; }
+    </style>
+</head>
+<body>
+    <h1>Job Application</h1>
+    <p>Save time! If you have a Standard Job Application (SJA) file, upload it here.</p>
+
+    <div>
+        <label for="sjaFile">SJA File (.json):</label>
+        <input type="file" id="sjaFileUploader" accept=".json">
+        <button type="button" id="loadSjaDataButton">Load Data from SJA</button>
+    </div>
+    <hr>
+
+    <form id="jobApplicationForm">
+        <h2>Applicant Information</h2>
+        <div>
+            <label for="firstName">First Name:</label>
+            <input type="text" id="firstName" name="firstName">
+        </div>
+        <div>
+            <label for="lastName">Last Name:</label>
+            <input type="text" id="lastName" name="lastName">
+        </div>
+        <div>
+            <label for="email">Email:</label>
+            <input type="email" id="email" name="email">
+        </div>
+        <div>
+            <label for="phone">Primary Phone:</label>
+            <input type="tel" id="phone" name="phone">
+        </div>
+        <div>
+            <label for="linkedin">LinkedIn URL:</label>
+            <input type="text" id="linkedin" name="linkedin">
+        </div>
+
+        <h2>Work Experience</h2>
+        <div id="workExperienceContainer">
+            <!-- First experience item (can be pre-rendered or added dynamically) -->
+            <div class="experience-item" id="workExpItem-0">
+                <h4>Experience 1</h4>
+                <div>
+                    <label for="companyName-0">Company Name:</label>
+                    <input type="text" id="companyName-0" name="companyName-0">
+                </div>
+                <div>
+                    <label for="jobTitle-0">Job Title:</label>
+                    <input type="text" id="jobTitle-0" name="jobTitle-0">
+                </div>
+                <div>
+                    <label for="responsibilities-0">Responsibilities:</label>
+                    <textarea id="responsibilities-0" name="responsibilities-0"></textarea>
+                </div>
+            </div>
+        </div>
+        <button type="button" id="addExperienceButton">Add Another Experience</button> <!-- For manual adding and SJA to trigger -->
+
+
+        <h2>Resume</h2>
+        <div id="resumeInfo"></div>
+        <div>
+            <label for="resumeFileUpload">Upload Resume:</label>
+            <input type="file" id="resumeFileUpload" name="resumeFile" required>
+        </div>
+
+        <br>
+        <button type="submit">Submit Application</button>
+    </form>
+
+    <script>
+        // THIS IS THE PART THE EMPLOYER CONFIGURES FOR THEIR SPECIFIC FORM
+        const SJA_Global_Mapping_Config = {
+            // Simple fields
+            "applicant_info.name.first_name": { selector: "#firstName" },
+            "applicant_info.name.last_name":  { selector: "#lastName" },
+            "applicant_info.email":           { selector: "#email" },
+            "applicant_info.phones[?(@.is_primary==true)].number": { selector: "#phone" }, // Example for finding primary phone
+            // Or simpler, if SJA guarantees first phone is primary or user always provides primary first:
+            // "applicant_info.phones[0].number": { selector: "#phone" },
+            "applicant_info.linkedin_url":    { selector: "#linkedin" },
+
+            // Array field: Work Experience
+            "work_experience": {
+                type: "array",
+                // How to find the container for the Nth item. {index} is replaced.
+                // Assumes employer's form uses IDs like "workExpItem-0", "workExpItem-1"
+                itemContainerPattern: "#workExpItem-{index}",
+                // If the first item has a different/static selector (common)
+                firstItemContainerSelector: "#workExpItem-0",
+                // Selector for the button to click if SJA has more items than rendered on form
+                addButtonSelector: "#addExperienceButton",
+                itemMapping: { // SJA keys within each work_experience item
+                    "company_name":   { selector: "input[id^='companyName-']" }, // Example: match input starting with companyName-
+                    "job_title":      { selector: "input[id^='jobTitle-']" },
+                    "responsibilities": { selector: "textarea[id^='responsibilities-']", fieldType: "textarea" }
+                    // Note: The selectors above within itemMapping are relative to their itemContainer.
+                    // E.g., itemContainer.querySelector("input[id^='companyName-']")
+                    // For more precise matching in complex forms, use more specific selectors
+                    // like input[name='companyName-{index}'] if names are also indexed.
+                    // This example uses `id^=` for simplicity if IDs are `companyName-0`, `companyName-1` etc.
+                }
+            },
+
+            // For displaying resume path info (not the upload itself)
+            "resume_path_info_display": { selector: "#resumeInfo" } // SJA_Parser uses this key specially
+        };
+
+        // Event listener for the "Load Data from SJA" button
+        document.getElementById('loadSjaDataButton').addEventListener('click', function() {
+            SJA_Parser.loadAndFillForm(
+                'sjaFileUploader',      // ID of the <input type="file">
+                SJA_Global_Mapping_Config, // The mapping configuration defined above
+                function(sjaData) {     // Optional: On Success Callback
+                    console.log("SJA data successfully processed!", sjaData);
+                    alert("Form has been pre-filled from your SJA file. Please review all fields, complete any remaining ones, and upload your resume manually.");
+                },
+                function(errorMessage) { // Optional: On Error Callback
+                    console.error("SJA Loading Error:", errorMessage);
+                    alert("Error loading SJA: " + errorMessage);
+                }
+            );
+        });
+
+        // --- Example: Simulating employer's "Add Experience" button functionality ---
+        // This is employer's existing JS, SJA_Parser can trigger it.
+        let experienceCount = 1; // Assuming one is already on the page
+        document.getElementById('addExperienceButton').addEventListener('click', function() {
+            const container = document.getElementById('workExperienceContainer');
+            const newItemHtml = `
+                <div class="experience-item" id="workExpItem-${experienceCount}">
+                    <h4>Experience ${experienceCount + 1}</h4>
+                    <div><label for="companyName-${experienceCount}">Company Name:</label><input type="text" id="companyName-${experienceCount}" name="companyName-${experienceCount}"></div>
+                    <div><label for="jobTitle-${experienceCount}">Job Title:</label><input type="text" id="jobTitle-${experienceCount}" name="jobTitle-${experienceCount}"></div>
+                    <div><label for="responsibilities-${experienceCount}">Responsibilities:</label><textarea id="responsibilities-${experienceCount}" name="responsibilities-${experienceCount}"></textarea></div>
+                </div>`;
+            container.insertAdjacentHTML('beforeend', newItemHtml);
+            experienceCount++;
+        });
+
+    </script>
+</body>
+</html>
